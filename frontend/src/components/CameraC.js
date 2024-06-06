@@ -4,7 +4,7 @@ import * as faceapi from 'face-api.js';
 import axios from 'axios';
 import './Camera.css';
 
-const Camera = () => {
+const Camera = ({ onStudentAdded }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -111,44 +111,72 @@ const Camera = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
   
-    // Convert Float32Array to regular array
-    const descriptorArray = Array.from(newStudent.descriptor);
-  
-    // Log the newStudent object to inspect its structure before sending
-    console.log('Submitting new student:', { ...newStudent, descriptor: descriptorArray });
-  
-    try {
-      const response = await axios.post('http://localhost:5001/api/students', {
-        name: newStudent.name,
-        studentId: newStudent.studentId,
-        photos: [newStudent.photo],
-        faceDescriptor: descriptorArray
-      });
-  
-      console.log('New student added successfully:', response.data);
-      setStudents([...students, response.data]);
-      setNewStudent({ name: '', studentId: '', photo: '', descriptor: [] });
-      setUnknownPhotos(unknownPhotos.filter(photo => photo.photo !== newStudent.photo));
-  
-      // Update faceMatcher with new data
-      const updatedDescriptors = [...students, response.data]
-        .filter(student => student.faceDescriptor && student.faceDescriptor.length > 0)
-        .map(student => {
-          const descriptors = student.faceDescriptor.map(fd => new Float32Array(fd));
-          return new faceapi.LabeledFaceDescriptors(student.name, descriptors);
+    // Check if the student already exists
+    const existingStudent = students.find(student => student.studentId === newStudent.studentId);
+    if (existingStudent) {
+      // Update the existing student
+      try {
+        const response = await axios.put(`http://localhost:5001/api/students/${existingStudent.studentId}/update`, {
+          photo: newStudent.photo,
+          faceDescriptor: Array.from(newStudent.descriptor) // Float32Array를 일반 배열로 변환
         });
+        console.log('Student updated successfully:', response.data);
+        setStudents(students.map(student => student._id === response.data._id ? response.data : student));
+        setNewStudent({ name: '', studentId: '', photo: '', descriptor: [] });
+        setUnknownPhotos(unknownPhotos.filter(photo => photo.photo !== newStudent.photo));
   
-      if (updatedDescriptors.length > 0) {
-        const matcher = new faceapi.FaceMatcher(updatedDescriptors);
-        setFaceMatcher(matcher);
+        // Update faceMatcher with new data
+        const updatedDescriptors = students
+          .filter(student => student.faceDescriptor && student.faceDescriptor.length > 0)
+          .map(student => {
+            const descriptors = student.faceDescriptor.map(fd => new Float32Array(fd));
+            return new faceapi.LabeledFaceDescriptors(student.name, descriptors);
+          });
+  
+        if (updatedDescriptors.length > 0) {
+          const matcher = new faceapi.FaceMatcher(updatedDescriptors);
+          setFaceMatcher(matcher);
+        }
+  
+      } catch (error) {
+        console.error('Error updating student:', error);
       }
+    } else {
+      // Add a new student
+      try {
+        const newStudentData = {
+          name: newStudent.name,
+          studentId: newStudent.studentId,
+          photos: [newStudent.photo],
+          faceDescriptor: Array.from(newStudent.descriptor) // Float32Array를 일반 배열로 변환
+        };
   
-    } catch (error) {
-      console.error('Error adding new student:', error);
+        console.log('Submitting new student:', newStudentData); // 디버깅 정보 추가
+  
+        const response = await axios.post('http://localhost:5001/api/students', newStudentData);
+        console.log('New student added successfully:', response.data);
+        setStudents([...students, response.data]);
+        setNewStudent({ name: '', studentId: '', photo: '', descriptor: [] });
+        setUnknownPhotos(unknownPhotos.filter(photo => photo.photo !== newStudent.photo));
+  
+        // Update faceMatcher with new data
+        const updatedDescriptors = [...students, response.data]
+          .filter(student => student.faceDescriptor && student.faceDescriptor.length > 0)
+          .map(student => {
+            const descriptors = student.faceDescriptor.map(fd => new Float32Array(fd));
+            return new faceapi.LabeledFaceDescriptors(student.name, descriptors);
+          });
+  
+        if (updatedDescriptors.length > 0) {
+          const matcher = new faceapi.FaceMatcher(updatedDescriptors);
+          setFaceMatcher(matcher);
+        }
+        onStudentAdded(response.data);
+      } catch (error) {
+        console.error('Error adding new student:', error);
+      }
     }
   };
-  
-  
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

@@ -15,6 +15,10 @@ router.get('/', async (req, res) => {
 // Add a new student
 router.post('/', async (req, res) => {
     const { name, photos, studentId, faceDescriptor } = req.body;
+    
+    // 디버깅 정보 추가
+    console.log('Received new student data:', req.body);
+  
     const newStudent = new Student({ name, photos, studentId, faceDescriptor });
     try {
       const savedStudent = await newStudent.save();
@@ -24,6 +28,24 @@ router.post('/', async (req, res) => {
     }
   });
   
+
+// Update an existing student
+router.put('/:studentId/update', async (req, res) => {
+    const { photo, faceDescriptor } = req.body;
+    try {
+      const student = await Student.findOne({ studentId: req.params.studentId });
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found' });
+      }
+  
+      student.photos.push(photo);
+      student.faceDescriptor.push(faceDescriptor);
+      const updatedStudent = await student.save();
+      res.json(updatedStudent);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  });
 
 // Add a photo to an existing student
 router.put('/:id/photos', async (req, res) => {

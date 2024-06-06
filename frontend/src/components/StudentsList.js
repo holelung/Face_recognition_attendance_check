@@ -1,21 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect } from 'react';
 
-const StudentList = () => {
-  const [students, setStudents] = useState([]);
-
+const StudentList = ({ students }) => {
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const response = await axios.get('http://localhost:5001/api/students');
-        setStudents(response.data);
-      } catch (error) {
-        console.error('Error fetching students:', error);
-      }
-    };
-
-    fetchStudents();
-  }, []);
+    console.log('Student list updated:', students);
+  }, [students]);
 
   return (
     <div>
