@@ -16,6 +16,6 @@ Database에 해당 얼굴에 대한 faceDescriptor가 존재하면, 해당하는
 
 
 ## 사용 Stack
-DB: MongoDB
-FrontEnd: React
-backEnd: NodeJS
+DB: MongoDB   
+FrontEnd: React   
+backEnd: NodeJS   
