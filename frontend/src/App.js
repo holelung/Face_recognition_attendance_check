@@ -5,6 +5,7 @@ import axios from 'axios';
 
 const App = () => {
   const [students, setStudents] = useState([]);
+  const [checkedStudent, setCheckedStudent] = useState(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -22,10 +23,34 @@ const App = () => {
   const handleStudentAdded = (newStudent) => {
     setStudents(prevStudents => [...prevStudents, newStudent]);
   };
+
+  const handleStudentUpdated = (updatedStudent) => {
+    setStudents(prevStudents => {
+      const studentIndex = prevStudents.findIndex(student => student._id === updatedStudent._id);
+      if (studentIndex !== -1) {
+        const updatedStudents = [...prevStudents];
+        updatedStudents[studentIndex] = updatedStudent;
+        return updatedStudents;
+      } else {
+        return [...prevStudents, updatedStudent];
+      }
+    });
+  };
+
+  const handleCheckAttendance = (studentId) => {
+    setCheckedStudent(studentId);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-      <Camera onStudentAdded={handleStudentAdded} />
-      <StudentList students={students} />
+      <Camera 
+        onStudentAdded={handleStudentAdded} 
+        onStudentUpdated={handleStudentUpdated} 
+        checkAttendance={handleCheckAttendance}
+      />
+      <StudentList 
+        students={students} 
+        checkAttendance={checkedStudent}/>
     </div>
   );
 };

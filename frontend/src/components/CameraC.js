@@ -4,7 +4,7 @@ import * as faceapi from 'face-api.js';
 import axios from 'axios';
 import './Camera.css';
 
-const Camera = ({ onStudentAdded }) => {
+const Camera = ({ onStudentAdded, onStudentUpdated, checkAttendance }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -60,6 +60,18 @@ const Camera = ({ onStudentAdded }) => {
     } catch (error) {
       console.error('Error finding best match:', error);
       return { label: 'unknown', distance: Infinity };
+    }
+  };
+
+  // markAttendance 함수 추가
+  const markAttendance = async (studentId) => {
+    try {
+      const response = await axios.post(`http://localhost:5001/api/students/${studentId}/attendance`);
+      console.log('Attendance marked successfully:', response.data);
+      // 출석 체크가 성공하면 부모 컴포넌트에 알림
+      checkAttendance(studentId); // 추가된 부분
+    } catch (error) {
+      console.error('Error marking attendance:', error);
     }
   };
 
@@ -136,7 +148,11 @@ const Camera = ({ onStudentAdded }) => {
                 const matcher = new faceapi.FaceMatcher(updatedDescriptors);
                 setFaceMatcher(matcher);
               }
-        
+              // 부모 컴포넌트에 업데이트된 학생 정보를 전달
+              onStudentUpdated(response.data);
+              // 출석 정보 전달
+              await markAttendance(existingStudent.studentId);
+
             } catch (error) {
               console.error('Error updating student:', error);
             }
@@ -181,6 +197,10 @@ const Camera = ({ onStudentAdded }) => {
           const matcher = new faceapi.FaceMatcher(updatedDescriptors);
           setFaceMatcher(matcher);
         }
+        // 학생 List 업데이트
+        onStudentUpdated(response.data);
+        // 출석 체크
+        markAttendance(existingStudent.studentId);
   
       } catch (error) {
         console.error('Error updating student:', error);
@@ -216,6 +236,8 @@ const Camera = ({ onStudentAdded }) => {
           setFaceMatcher(matcher);
         }
         onStudentAdded(response.data);
+        markAttendance(newStudentData.studentId);
+
       } catch (error) {
         console.error('Error adding new student:', error);
       }

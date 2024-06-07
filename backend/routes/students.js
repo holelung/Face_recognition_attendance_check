@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Student = require('../models/student');
+const Attendance = require('../models/attendance');
 
 // Get all students
 router.get('/', async (req, res) => {
@@ -68,4 +69,26 @@ router.put('/:id/photos', async (req, res) => {
   }
 });
 
+// 출석 체크
+router.post('/:studentId/attendance', async (req, res) => {
+    const { studentId } = req.params;
+    const { date } = req.body;
+  
+    try {
+      const student = await Student.findOne({ studentId });
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found' });
+      }
+  
+      const attendance = new Attendance({
+        studentId,
+        date: date || new Date(), // 현재 날짜를 기본값으로 사용
+      });
+  
+      const savedAttendance = await attendance.save();
+      res.status(201).json(savedAttendance);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  });
 module.exports = router;
