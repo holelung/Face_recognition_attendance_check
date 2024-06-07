@@ -13,7 +13,7 @@ const StudentList = ({ students }) => {
           <li key={student._id}>
             <p>{student.name}</p>
             {student.photos && student.photos.length > 0 && (
-              <img src={student.photos[0]} alt={student.name} width="100" />
+              <img src={student.photos.slice(-1)[0]} alt={student.name} width="100" />
             )}
           </li>
         ))}

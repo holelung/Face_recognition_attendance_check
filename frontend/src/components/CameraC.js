@@ -63,6 +63,7 @@ const Camera = ({ onStudentAdded }) => {
     }
   };
 
+  // 캡처 기능 클릭 -> 얼굴 인식 및 데이터 비교
   const handleCapture = async () => {
     const video = webcamRef.current.video;
 
@@ -87,16 +88,59 @@ const Camera = ({ onStudentAdded }) => {
 
       if (resizedDetections.length > 0) {
         const bestMatch = findBestMatch(resizedDetections[0].descriptor);
+
+        // 크롭된 얼굴 이미지 생성
+        const box = resizedDetections[0].detection.box;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = box.width;
+        canvas.height = box.height;
+        context.drawImage(
+          video,
+          box.x, box.y, box.width, box.height,
+          0, 0, box.width, box.height
+        );
+        const croppedFace = canvas.toDataURL('image/jpeg');
+        // 일치하는 학생이 없을 경우
         if (bestMatch.label === 'unknown') {
           const descriptorKey = JSON.stringify(resizedDetections[0].descriptor);
           if (!processedDescriptors.has(descriptorKey)) {
             setProcessedDescriptors((prev) => new Set(prev).add(descriptorKey));
             setUnknownPhotos((prev) => [
               ...prev,
-              { id: descriptorKey, photo: webcamRef.current.getScreenshot(), descriptor: resizedDetections[0].descriptor },
+              { id: descriptorKey, photo: croppedFace, descriptor: resizedDetections[0].descriptor },
             ]);
           }
-        } else {
+        } else { // 일치하는 학생이 있을 경우
+          const existingStudent = students.find(student => student.name === bestMatch.label);
+          if (existingStudent) {
+            try {
+              const response = await axios.put(`http://localhost:5001/api/students/${existingStudent.studentId}/update`, {
+                photo: croppedFace,
+                faceDescriptor: Array.from(resizedDetections[0].descriptor) // Float32Array를 일반 배열로 변환
+              });
+              console.log('Student updated successfully:', response.data);
+              setStudents(students.map(student => student._id === response.data._id ? response.data : student));
+              setNewStudent({ name: '', studentId: '', photo: '', descriptor: [] });
+              setUnknownPhotos(unknownPhotos.filter(photo => photo.photo !== newStudent.photo));
+        
+              // Update faceMatcher with new data
+              const updatedDescriptors = students
+                .filter(student => student.faceDescriptor && student.faceDescriptor.length > 0)
+                .map(student => {
+                  const descriptors = student.faceDescriptor.map(fd => new Float32Array(fd));
+                  return new faceapi.LabeledFaceDescriptors(student.name, descriptors);
+                });
+        
+              if (updatedDescriptors.length > 0) {
+                const matcher = new faceapi.FaceMatcher(updatedDescriptors);
+                setFaceMatcher(matcher);
+              }
+        
+            } catch (error) {
+              console.error('Error updating student:', error);
+            }
+          }
           setSelectedStudent(bestMatch.label);
         }
       }

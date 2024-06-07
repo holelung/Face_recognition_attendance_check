@@ -6,6 +6,7 @@ const Student = require('../models/student');
 router.get('/', async (req, res) => {
   try {
     const students = await Student.find();
+    console.log(students);
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -16,8 +17,6 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, photos, studentId, faceDescriptor } = req.body;
     
-    // 디버깅 정보 추가
-    console.log('Received new student data:', req.body);
   
     const newStudent = new Student({ name, photos, studentId, faceDescriptor });
     try {
