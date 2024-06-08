@@ -15,17 +15,18 @@ const Camera = ({ onStudentAdded, onStudentUpdated, checkAttendance }) => {
   const [processedDescriptors, setProcessedDescriptors] = useState(new Set());
   const [faceMatcher, setFaceMatcher] = useState(null);
 
+  // 앱 실행될 때 실행
   useEffect(() => {
     const loadModelsAndStudents = async () => {
-      try {
+      try { // face-api.js 모델 로드
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
         await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
         await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
         await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
-
+        // 학생정보 불러오기
         const response = await axios.get('http://localhost:5001/api/students');
         setStudents(response.data);
-
+        // 학생정보의 FaceDescriptor 를 faceapi로 라벨링
         if (response.data.length > 0) {
           const labeledDescriptors = response.data
             .filter(student => student.faceDescriptor && student.faceDescriptor.length > 0)
@@ -33,13 +34,13 @@ const Camera = ({ onStudentAdded, onStudentUpdated, checkAttendance }) => {
               const descriptors = student.faceDescriptor.map(fd => new Float32Array(fd));
               return new faceapi.LabeledFaceDescriptors(student.name, descriptors);
             });
-
+          // faceMatcher 등록
           if (labeledDescriptors.length > 0) {
             const matcher = new faceapi.FaceMatcher(labeledDescriptors);
             setFaceMatcher(matcher);
           }
         }
-
+        // try가 성공적으로 끝낫을 때 ModelsLoaded 스테이트를 true로 변경
         setModelsLoaded(true);
       } catch (error) {
         console.error('Error loading models or fetching students:', error);
@@ -48,7 +49,7 @@ const Camera = ({ onStudentAdded, onStudentUpdated, checkAttendance }) => {
 
     loadModelsAndStudents();
   }, []);
-
+  // 얼굴 매칭 함수 (handleCapture에서 실행시킴)
   const findBestMatch = (queryDescriptor) => {
     if (!faceMatcher) {
       return { label: 'unknown', distance: Infinity };
@@ -168,6 +169,7 @@ const Camera = ({ onStudentAdded, onStudentUpdated, checkAttendance }) => {
     setNewStudent({ ...newStudent, [name]: value });
   };
 
+  // submit 버튼을 눌렀을 경우 동작(이미지가 DB에 없을 경우)
   const handleFormSubmit = async (e) => {
     e.preventDefault();
   
